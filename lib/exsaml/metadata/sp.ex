@@ -61,14 +61,25 @@ defmodule Exsaml.Metadata.SP do
     Map.put(metadata, :sign_assertions, sign_assertions)
   end
 
-  @spec organization(Map.t(), binary()) :: Map.t()
-  def organization(metadata, organization) do
-    Map.put(metadata, :organization, organization)
+  @spec organization(Map.t(), binary(), binary(), binary()) :: Map.t()
+  def organization(metadata, name, display_name, url)
+      when is_binary(name) and is_binary(display_name) and is_binary(url) do
+    Map.put(metadata, :organization, %{name: name, display_name: display_name, url: url})
   end
 
-  @spec contact(Map.t(), atom(), binary()) :: Map.t()
-  def contact(metadata, type, contact) when type in [:technical, :support] do
-    contacts = [{type, contact} | Map.get(metadata, :contacts, [])]
+  @doc """
+  Add a new contact to metadata. You can add multiple contacts
+
+  $contact values:
+  - name: Optional string element that specifies the name of the contact person.
+  - email: Zero or more elements containing mailto: URIs representing e-mail addresses belonging to contact person.
+  - phone_number: Zero or more string elements specifying a telephone number of the contact person.
+  - company: Optional string that specifies the company of the contact person.
+  """
+  @spec contact(Map.t(), atom(), Keyword.t()) :: Map.t()
+  def contact(metadata, type, contact)
+      when type in [:technical, :support, :administrative, :billing, :other] do
+    contacts = [{type, build_contact(contact)} | Map.get(metadata, :contacts, [])]
     Map.put(metadata, :contacts, contacts)
   end
 
@@ -78,12 +89,14 @@ defmodule Exsaml.Metadata.SP do
     Map.put(metadata, :certificates, certs)
   end
 
-  @spec validate(Map.t()) :: Map.t() | {:error, SyntaxError.t()}
+  @spec validate(Map.t()) :: Map.t() | {:error, RuntimeError.t()}
   def validate(metadata) do
-    with :ok <- has_required_keys(metadata) do
+    with :ok <- has_required_keys(metadata),
+         :ok <- validate_certificates(metadata) do
       metadata
     else
-      {:error, "missing keys" <> _rest} = err -> err
+      {:error, "missing keys" <> _rest = missing_key_error} ->
+        {:error, %RuntimeError{message: missing_key_error}}
     end
   end
 
@@ -92,13 +105,35 @@ defmodule Exsaml.Metadata.SP do
     ""
   end
 
+  defp build_contact(contact) do
+    Enum.reduce(
+      contact,
+      %{},
+      fn {key, value}, acc ->
+        if key in [:name, :email, :phone_number, :company] do
+          Map.put(acc, key, value)
+        else
+          acc
+        end
+      end
+    )
+  end
+
   defp has_required_keys(metadata) do
     case Enum.filter(@required_keys, fn k -> Map.has_key?(metadata, k) == false end) do
       [] ->
         :ok
 
       missing_keys ->
-        {:error, "missing keys: " <> Enum.join(missing_keys, ",")}
+        {:error, "missing keys: " <> Enum.join(missing_keys, ", ")}
     end
+  end
+
+  defp validate_certificates(%{certificates: certificates}) do
+    :ok
+  end
+
+  defp validate_certificate(_metadata) do
+    :ok
   end
 end

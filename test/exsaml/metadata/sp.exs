@@ -31,12 +31,23 @@ defmodule Exsaml.Metadata.SPTest do
     end
 
     test "it add organization" do
-      assert %{organization: [name: "org name"]} = MetadataSP.organization(%{}, name: "org name")
+      assert %{
+               organization: %{
+                 name: "org name",
+                 display_name: "org display name",
+                 url: "http://org.url"
+               }
+             } = MetadataSP.organization(%{}, "org name", "org display name", "http://org.url")
     end
 
     test "it add contact" do
-      assert %{contacts: [{:technical, [name: "technical name"]}]} =
-               MetadataSP.contact(%{}, :technical, name: "technical name")
+      assert %{
+               contacts: [{:technical, %{name: "technical name", email: "technical@email.com"}}]
+             } =
+               MetadataSP.contact(%{}, :technical,
+                 name: "technical name",
+                 email: "technical@email.com"
+               )
     end
 
     test "it add certificate" do
@@ -49,12 +60,12 @@ defmodule Exsaml.Metadata.SPTest do
       metadata =
         %{}
         |> MetadataSP.contact(:support, name: "support name", email: "support@email.com")
-        |> MetadataSP.contact(:technical, name: "technical name", email: "technical@email.com")
+        |> MetadataSP.contact(:technical, company: "technical company", phone_number: "00000000")
 
       assert metadata == %{
                contacts: [
-                 technical: [name: "technical name", email: "technical@email.com"],
-                 support: [name: "support name", email: "support@email.com"]
+                 technical: %{company: "technical company", phone_number: "00000000"},
+                 support: %{name: "support name", email: "support@email.com"}
                ]
              }
     end
@@ -76,7 +87,7 @@ defmodule Exsaml.Metadata.SPTest do
     end
   end
 
-  decribe "it validates metadata" do
+  describe "it validates metadata" do
     test "it says 'ok' with valid metadata" do
       metadata =
         %{}
@@ -90,14 +101,45 @@ defmodule Exsaml.Metadata.SPTest do
         |> MetadataSP.sign_requests(true)
         |> MetadataSP.sign_assertions(true)
         |> MetadataSP.organization(
-          name: "your org name",
-          display_name: "your org display name",
-          url: "yourorg.url"
+          "your org name",
+          "your org display name",
+          "yourorg.url"
         )
         |> MetadataSP.contact(:technical, name: "name", email: "your@email.com")
-        |> MetadataSP.contact(:support, name: "name", email: "your@email.com")
 
-      assert MetadataSP.validate(metadata) == :ok
+      assert MetadataSP.validate(metadata) ==
+               %{
+                 certificates: [
+                   {:encryption, "encryption cert"},
+                   {:signing, "signing cert"},
+                   "cool cert"
+                 ],
+                 consume_url: "http://consume.url",
+                 contacts: [
+                   technical: %{name: "name", email: "your@email.com"}
+                 ],
+                 entity_id: "my.entityid.com",
+                 logout_url: "http://logout.url",
+                 nameid_format: "urn:oasis:names:tc:SAML:2.0:nameid-format:transient",
+                 organization: %{
+                   name: "your org name",
+                   display_name: "your org display name",
+                   url: "yourorg.url"
+                 },
+                 sign_assertions: true,
+                 sign_requests: true
+               }
+    end
+
+    test "returns a RuntimeError when a required key is missing" do
+      assert {:error, %RuntimeError{message: "missing keys: entity_id, consume_url"}} ==
+               MetadataSP.validate(%{})
+
+      assert {:error, %RuntimeError{message: "missing keys: consume_url"}} ==
+               MetadataSP.validate(%{entity_id: "entityid"})
+
+      assert {:error, %RuntimeError{message: "missing keys: entity_id"}} ==
+               MetadataSP.validate(%{consume_url: "consumr.url"})
     end
   end
 end
