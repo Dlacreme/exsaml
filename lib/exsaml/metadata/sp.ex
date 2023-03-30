@@ -20,7 +20,7 @@ defmodule Exsaml.Metadata.SP do
   |> MetadataSP.certificate({:encryption, cert})
   |> MetadataSP.sign_requests(true) # optional - false by default
   |> MetadataSP.sign_assertions(true) # optional - false by default
-  |> MetadataSP.organization([name: "your org name", display_name: "your org display name", url: "yourorg.url"]) # optional
+  |> MetadataSP.organization("your org name", "your org display name", "yourorg.url") # optional
   |> MetadataSP.contact(:technical, [name: "name", email: "your@email.com"]) # optional
   |> MetadataSP.contact(:support, [name: "name", email: "your@email.com"]) # optional
   # You can validate the format of your metadata ; optional
@@ -91,8 +91,7 @@ defmodule Exsaml.Metadata.SP do
 
   @spec validate(Map.t()) :: Map.t() | {:error, RuntimeError.t()}
   def validate(metadata) do
-    with :ok <- has_required_keys(metadata),
-         :ok <- validate_certificates(metadata) do
+    with :ok <- has_required_keys(metadata) do
       metadata
     else
       {:error, "missing keys" <> _rest = missing_key_error} ->
@@ -127,13 +126,5 @@ defmodule Exsaml.Metadata.SP do
       missing_keys ->
         {:error, "missing keys: " <> Enum.join(missing_keys, ", ")}
     end
-  end
-
-  defp validate_certificates(%{certificates: certificates}) do
-    :ok
-  end
-
-  defp validate_certificate(_metadata) do
-    :ok
   end
 end
