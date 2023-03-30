@@ -11,7 +11,7 @@ defmodule Exsaml.Metadata.SP do
   %{}
   |> MetadataSP.entity_id("my.entityid.com") # required
   |> MetadataSP.consume_url("https://xxx/consume") # required
-  |> MetadataSP.logout_url("https://xxx/consume) # optional
+  |> MetadataSP.logout_url("https://xxx/logout') # optional
   |> MetadataSP.nameid_format("urn:oasis:names:tc:SAML:2.0:nameid-format:transient") # optional
   # You can add multiplicate certificates. By default they are used for both signature & encryption
   |> MetadataSP.certificate(cert)
