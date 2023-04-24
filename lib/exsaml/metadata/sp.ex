@@ -29,6 +29,8 @@ defmodule Exsaml.Metadata.SP do
   |> MetadataSP.to_xml()
   ```
   """
+  alias Xmerl.XmlElement
+
   @required_keys [:entity_id, :consume_url]
 
   @spec entity_id(Map.t(), binary()) :: Map.t()
@@ -101,6 +103,10 @@ defmodule Exsaml.Metadata.SP do
 
   @spec to_xml(Map.t()) :: binary() | {:error, RuntimeError.t()}
   def to_xml(metadata) do
+    metadata = {Xmerl.XmlElement, "hello"}
+
+    :xmerl.export([metadata], :xmerl_xml, prolog: '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n')
+
     ""
   end
 

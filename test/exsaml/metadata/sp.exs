@@ -1,5 +1,6 @@
 defmodule Exsaml.Metadata.SPTest do
   use ExUnit.Case
+  doctest Exsaml.Metadata.SP
 
   alias Exsaml.Metadata.SP, as: MetadataSP
 
@@ -140,6 +141,33 @@ defmodule Exsaml.Metadata.SPTest do
 
       assert {:error, %RuntimeError{message: "missing keys: entity_id"}} ==
                MetadataSP.validate(%{consume_url: "consumr.url"})
+    end
+  end
+
+  describe "it generate valid XML metadata" do
+    test "basic XML metadata" do
+      metadata =
+        %{}
+        |> MetadataSP.entity_id("my.entityid.com")
+        |> MetadataSP.consume_url("http://consume.url")
+        |> MetadataSP.logout_url("http://logout.url")
+        |> MetadataSP.nameid_format(~s(urn:oasis:names:tc:SAML:2.0:nameid-format:transient))
+        |> MetadataSP.certificate("cool cert")
+        |> MetadataSP.certificate({:signing, "signing cert"})
+        |> MetadataSP.certificate({:encryption, "encryption cert"})
+        |> MetadataSP.sign_requests(true)
+        |> MetadataSP.sign_assertions(true)
+        |> MetadataSP.organization(
+          "your org name",
+          "your org display name",
+          "yourorg.url"
+        )
+        |> MetadataSP.contact(:technical, name: "name", email: "your@email.com")
+
+      assert MetadataSP.to_xml(metadata) == "<xml?"
+    end
+
+    test "complexe XML metadata" do
     end
   end
 end
